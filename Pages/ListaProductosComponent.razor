@@ -1,0 +1,41 @@
+﻿@page "/ListaProductos"
+@page "/ListaProductos/{CategoriaID:int}"
+
+@using ProductosApp.Models
+@using ProductosApp.BLL
+
+<div class="container">
+    <div class="row">
+        @for (int i = 1; i <= 12; i++)
+        {
+            <div class="col-lg-3 col-md-6 col-sm-6">
+
+                <div class="product__item">
+                    @if (ProductosBLL.Buscar(i) != null)
+                    {
+                        <div class="product__item__pic set-bg">
+
+                            <div class="product__label">
+                                <img class="align-self-center" src="/Resources/cake-piece.png" />
+                                @*<span>Producto @i</span>*@
+                            </div>
+                        </div>
+                        <div class="product__item__text">
+
+                            <h6><a href="#">@ProductosBLL.Buscar(i).Descripcion</a></h6>
+                            <div class="product__item__price">@ProductosBLL.Buscar(i).Precio</div>
+                            <div class="cart_add">
+                                <a href="#">Add to cart</a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        </div>
+    </div>
+
+@code {
+    [Parameter]
+    public int CategoriaID { get; set; }
+}

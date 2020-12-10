@@ -1,0 +1,206 @@
+﻿@page "/Registros/Productos"
+@page "/Registros/Productos/{ProductoId:int}"
+
+@using ProductosApp.Models
+@using ProductosApp.Data
+@using ProductosApp.BLL
+
+@inject IJSRuntime JS
+
+<EditForm Model="productos" OnValidSubmit="Guardar">
+    <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-header  alert-info">
+            <h3>Registro de Productos</h3>
+        </div>
+
+        <div class="card-body">
+            <label for="Codigo">Código:</label>
+            <div class="input-group">
+                <InputNumber @bind-Value="productos.Codigo" class="form-control"></InputNumber>
+                <ValidationMessage For="(() => productos.Codigo)"></ValidationMessage>
+
+                <div class="input-group-append">
+                    <button type="button" class="btn btn-primary" @onclick="Buscar"><span class="icon-search"></span>Buscar</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="DESCRIPCION">Descripción</label>
+                <InputText @bind-Value="productos.Descripcion" class="form-control"></InputText>
+                <ValidationMessage For="(() => productos.Descripcion)"></ValidationMessage>
+            </div>
+
+            <div class="form-group">
+                <label for="CANTIDAD">Inventario</label>
+                <InputNumber @bind-Value="productos.Inventario" class="form-control"></InputNumber>
+                <ValidationMessage For="(() => productos.Inventario)"></ValidationMessage>
+            </div>
+
+            <div class="form-group">
+                <label for="PRECIO">Precio</label>
+                <InputNumber @bind-Value="productos.Precio" class="form-control" step="00.2"></InputNumber>
+                <ValidationMessage For="(() => productos.Precio)"></ValidationMessage>
+            </div>
+
+            <div class="form-group text-center">
+                <button type="button" class="btn btn-secondary" @onclick="Nuevo"><span class="icon-add"></span> Nuevo </button>
+                <button type="submit" class="btn btn-success"><span class="icon-save"></span> Guardar </button>
+                <button type="button" class="btn btn-danger" @onclick="Eliminar"><span class="icon-delete_forever"></span> Eliminar </button>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+  [Parameter]
+  public int ProductoId { get; set; }
+
+  Productos p = new Productos();
+
+  Productos productos = new Productos();
+    private string auxDescripcion { get; set; }
+
+    protected override void OnParametersSet()
+    {
+      var id = ProductoId;
+      var result = Buscar(id);
+    }
+
+    protected override void OnInitialized()
+    {
+      Nuevo();
+      var s = Buscar();
+    }
+
+    private void Nuevo()
+    {
+      productos = new Productos();
+    }
+
+    private void IgualarCampos()
+    {
+      auxDescripcion = productos.Descripcion;
+    }
+
+    private async Task<bool> Validar()
+    {
+      bool paso = true;
+
+      if (productos.Codigo == 0)
+      {
+          if (ProductosBLL.VerificarExistenciaDelProducto(productos.Descripcion))
+          {
+              await JS.Confirmar("top-center", "info", "Aviso", "Este producto ya existe.", false, 2000);
+              paso = false;
+          }
+      }
+      else
+      {
+          if (productos.Descripcion != auxDescripcion)
+          {
+              if (ProductosBLL.VerificarExistenciaDelProducto(productos.Descripcion))
+              {
+                  await JS.Confirmar("top-center", "info", "Aviso", "Este producto ya existe.", false, 2000);
+                  paso = false;
+              }
+          }
+      }
+
+      return paso;
+    }
+
+    private async Task Guardar()
+    {
+      var validado = await Validar();
+      bool guardado = false;
+
+      if (!validado)
+          return;
+
+      if (productos.Codigo == 0)
+      {
+          guardado = ProductosBLL.Guardar(productos);
+      }
+      else
+      {
+          if (ProductosBLL.ExisteParaModificar(productos.Codigo))
+              guardado = ProductosBLL.Guardar(productos);
+      }
+
+      if (guardado)
+      {
+          Nuevo();
+          await JS.Confirmar("top-center", "success", "Guardado Exitosamente", "Buen trabajo", false, 2000);
+      }
+      else
+      {
+          await JS.Confirmar("top-center", "error", "Error", "No se pudo guardar el producto", false, 2000);
+      }
+
+    }
+
+    private async Task Eliminar()
+    {
+      bool eliminado;
+      Context db = new Context();
+
+      if (productos.Inventario > 0)
+      {
+          await JS.Confirmar("top-center", "error", "Sorry!", "No puedes eliminar este producto porque aun hay algunos en stock", false, 2000);
+      }
+      else
+      {
+          if (await JS.ConfirmDelete("Confirmar", "¿Esta seguro que desea eliminar este producto?", "question"))
+          {
+              eliminado = ProductosBLL.Eliminar(productos.Codigo);
+
+              if (eliminado)
+              {
+                  Nuevo();
+                  await JS.Confirmar("top-center", "success", "Eliminado", "Eliminado correctamente", false, 2000);
+              }
+              else
+              {
+                  await JS.Confirmar("top-center", "error", "Error", "No se pudo eliminar", false, 2000);
+              }
+          }
+      }
+    }
+
+    private async Task Buscar()
+    {
+      if (productos.Codigo > 0)
+      {
+          var Encontrado = ProductosBLL.Buscar(productos.Codigo);
+
+          if (Encontrado != null)
+          {
+              this.productos = Encontrado;
+              IgualarCampos();
+          }
+          else
+          {
+              await JS.Confirmar("top-center", "error", "Error", "No se encontró el producto", false, 2000);
+          }
+      }
+    }
+
+    private async Task Buscar(int ProductoId)
+    {
+      if (ProductoId > 0)
+      {
+          var Encontrado = ProductosBLL.Buscar(ProductoId);
+
+          if (Encontrado != null)
+          {
+              this.productos = Encontrado;
+              IgualarCampos();
+          }
+          else
+          {
+              await JS.Confirmar("top-center", "error", "Error", "No se encontró el producto", false, 2000);
+          }
+      }
+    }
+}
